@@ -1,0 +1,654 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Griffin LMS API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: modules
+    description: LMS module operations
+  - name: progress
+    description: Learner progress tracking
+  - name: quiz
+    description: Quiz engine operations
+  - name: certificate
+    description: Certificate and badge operations
+  - name: ai-assistant
+    description: AI assistant chat operations
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /modules:
+    get:
+      operationId: getModules
+      tags: [modules]
+      summary: List all modules
+      responses:
+        "200":
+          description: List of modules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Module"
+
+  /modules/{moduleId}:
+    get:
+      operationId: getModule
+      tags: [modules]
+      summary: Get module with subtopics
+      parameters:
+        - name: moduleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Module details with subtopics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModuleDetail"
+        "404":
+          description: Not found
+
+  /subtopics/{subtopicId}:
+    get:
+      operationId: getSubtopic
+      tags: [modules]
+      summary: Get subtopic details
+      parameters:
+        - name: subtopicId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Subtopic details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubtopicDetail"
+        "404":
+          description: Not found
+
+  /progress:
+    get:
+      operationId: getProgress
+      tags: [progress]
+      summary: Get learner overall progress
+      parameters:
+        - name: learnerId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Overall progress summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressSummary"
+
+  /progress/subtopic/{subtopicId}:
+    post:
+      operationId: updateSubtopicProgress
+      tags: [progress]
+      summary: Update progress for a subtopic section
+      parameters:
+        - name: subtopicId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgressUpdate"
+      responses:
+        "200":
+          description: Updated progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubtopicProgress"
+
+  /quiz:
+    get:
+      operationId: fetchQuiz
+      tags: [quiz]
+      summary: Get quiz questions for subtopic (no answers)
+      parameters:
+        - name: subtopicId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: learnerId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Quiz questions without answers
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizSession"
+        "404":
+          description: No quiz found
+
+  /quiz/attempt:
+    post:
+      operationId: submitQuizAttempt
+      tags: [quiz]
+      summary: Submit quiz answers and get results
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuizAttemptInput"
+      responses:
+        "200":
+          description: Quiz result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResult"
+
+  /quiz/attempts:
+    get:
+      operationId: listQuizAttempts
+      tags: [quiz]
+      summary: Get quiz attempt history for subtopic
+      parameters:
+        - name: subtopicId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: learnerId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Attempt history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/QuizAttemptSummary"
+
+  /certificate:
+    get:
+      operationId: getCertificate
+      tags: [certificate]
+      summary: Get certificate if all modules completed
+      parameters:
+        - name: learnerId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Certificate data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Certificate"
+        "404":
+          description: Certificate not yet earned
+
+  /certificate/verify/{verificationId}:
+    get:
+      operationId: verifyCertificate
+      tags: [certificate]
+      summary: Verify certificate authenticity
+      parameters:
+        - name: verificationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CertificateVerification"
+
+  /ai-assistant/chat:
+    post:
+      operationId: chatWithAssistant
+      tags: [ai-assistant]
+      summary: Chat with the LMS AI assistant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatMessage"
+      responses:
+        "200":
+          description: AI assistant response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [progress]
+      summary: Get learner dashboard summary stats
+      parameters:
+        - name: learnerId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Module:
+      type: object
+      required: [id, title, description, order, subtopicCount, isLocked]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        order:
+          type: integer
+        subtopicCount:
+          type: integer
+        introVideoUrl:
+          type: ["string", "null"]
+        closingVideoUrl:
+          type: ["string", "null"]
+        isLocked:
+          type: boolean
+
+    ModuleDetail:
+      type: object
+      required: [id, title, description, order, introVideoUrl, closingVideoUrl, subtopics]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        order:
+          type: integer
+        introVideoUrl:
+          type: ["string", "null"]
+        closingVideoUrl:
+          type: ["string", "null"]
+        subtopics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Subtopic"
+
+    Subtopic:
+      type: object
+      required: [id, moduleId, title, order, hasPracticalVideo, isLocked]
+      properties:
+        id:
+          type: integer
+        moduleId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        order:
+          type: integer
+        hasPracticalVideo:
+          type: boolean
+        practicalVideoUrl:
+          type: ["string", "null"]
+        practicalVideoTitle:
+          type: ["string", "null"]
+        presentationUrl:
+          type: ["string", "null"]
+        isLocked:
+          type: boolean
+
+    SubtopicDetail:
+      type: object
+      required: [id, moduleId, title, order, hasPracticalVideo]
+      properties:
+        id:
+          type: integer
+        moduleId:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        order:
+          type: integer
+        hasPracticalVideo:
+          type: boolean
+        practicalVideoUrl:
+          type: ["string", "null"]
+        practicalVideoUrl2:
+          type: ["string", "null"]
+        practicalVideoTitle:
+          type: ["string", "null"]
+        practicalVideoTitle2:
+          type: ["string", "null"]
+        presentationUrl:
+          type: ["string", "null"]
+        writeupContent:
+          type: ["string", "null"]
+        voiceType:
+          type: string
+          enum: [male, female]
+
+    ProgressSummary:
+      type: object
+      required: [learnerId, totalModules, completedModules, totalSubtopics, completedSubtopics, overallPercent, moduleProgress]
+      properties:
+        learnerId:
+          type: string
+        totalModules:
+          type: integer
+        completedModules:
+          type: integer
+        totalSubtopics:
+          type: integer
+        completedSubtopics:
+          type: integer
+        overallPercent:
+          type: number
+        moduleProgress:
+          type: array
+          items:
+            $ref: "#/components/schemas/ModuleProgress"
+
+    ModuleProgress:
+      type: object
+      required: [moduleId, title, completedSubtopics, totalSubtopics, percent]
+      properties:
+        moduleId:
+          type: integer
+        title:
+          type: string
+        completedSubtopics:
+          type: integer
+        totalSubtopics:
+          type: integer
+        percent:
+          type: number
+
+    SubtopicProgress:
+      type: object
+      required: [subtopicId, learnerId, videoWatched, presentationViewed, quizPassed, completedAt]
+      properties:
+        subtopicId:
+          type: integer
+        learnerId:
+          type: string
+        videoWatched:
+          type: boolean
+        presentationViewed:
+          type: boolean
+        readingCompleted:
+          type: boolean
+        practicalVideoWatched:
+          type: boolean
+        quizPassed:
+          type: boolean
+        completedAt:
+          type: ["string", "null"]
+
+    ProgressUpdate:
+      type: object
+      required: [learnerId, section]
+      properties:
+        learnerId:
+          type: string
+        section:
+          type: string
+          enum: [video, presentation, reading, practical_video, quiz_started]
+
+    QuizSession:
+      type: object
+      required: [subtopicId, subtopicTitle, questions, durationMinutes, passingScore, attemptsRemaining]
+      properties:
+        subtopicId:
+          type: integer
+        subtopicTitle:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+        durationMinutes:
+          type: integer
+        passingScore:
+          type: integer
+        attemptsRemaining:
+          type: integer
+
+    QuizQuestion:
+      type: object
+      required: [id, text, options]
+      properties:
+        id:
+          type: integer
+        text:
+          type: string
+        scenario:
+          type: ["string", "null"]
+        options:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizOption"
+
+    QuizOption:
+      type: object
+      required: [id, text]
+      properties:
+        id:
+          type: string
+        text:
+          type: string
+
+    QuizAttemptInput:
+      type: object
+      required: [subtopicId, learnerId, answers]
+      properties:
+        subtopicId:
+          type: integer
+        learnerId:
+          type: string
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizAnswer"
+
+    QuizAnswer:
+      type: object
+      required: [questionId, selectedOptionId]
+      properties:
+        questionId:
+          type: integer
+        selectedOptionId:
+          type: string
+
+    QuizResult:
+      type: object
+      required: [passed, score, passingScore, attemptsUsed, attemptsRemaining, requiresRetake]
+      properties:
+        passed:
+          type: boolean
+        score:
+          type: integer
+        passingScore:
+          type: integer
+        attemptsUsed:
+          type: integer
+        attemptsRemaining:
+          type: integer
+        requiresRetake:
+          type: boolean
+        feedback:
+          type: ["string", "null"]
+
+    QuizAttemptSummary:
+      type: object
+      required: [id, subtopicId, score, passed, attemptNumber, attemptedAt]
+      properties:
+        id:
+          type: integer
+        subtopicId:
+          type: integer
+        score:
+          type: integer
+        passed:
+          type: boolean
+        attemptNumber:
+          type: integer
+        attemptedAt:
+          type: string
+
+    Certificate:
+      type: object
+      required: [learnerId, learnerName, verificationId, completionDate, modules]
+      properties:
+        learnerId:
+          type: string
+        learnerName:
+          type: string
+        verificationId:
+          type: string
+        completionDate:
+          type: string
+        linkedInUrl:
+          type: ["string", "null"]
+        modules:
+          type: array
+          items:
+            type: string
+
+    CertificateVerification:
+      type: object
+      required: [valid, verificationId]
+      properties:
+        valid:
+          type: boolean
+        verificationId:
+          type: string
+        learnerName:
+          type: ["string", "null"]
+        completionDate:
+          type: ["string", "null"]
+        issuedBy:
+          type: ["string", "null"]
+
+    ChatMessage:
+      type: object
+      required: [message, learnerId]
+      properties:
+        message:
+          type: string
+        learnerId:
+          type: string
+        context:
+          type: ["string", "null"]
+
+    ChatResponse:
+      type: object
+      required: [reply, blocked]
+      properties:
+        reply:
+          type: string
+        blocked:
+          type: boolean
+        blockReason:
+          type: ["string", "null"]
+
+    DashboardSummary:
+      type: object
+      required: [learnerId, currentModule, currentSubtopic, streakDays, totalTimeMinutes, quizAvgScore, nextAction]
+      properties:
+        learnerId:
+          type: string
+        currentModule:
+          type: integer
+        currentSubtopic:
+          type: ["string", "null"]
+        streakDays:
+          type: integer
+        totalTimeMinutes:
+          type: integer
+        quizAvgScore:
+          type: number
+        nextAction:
+          type: string
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/ActivityItem"
+
+    ActivityItem:
+      type: object
+      required: [type, description, timestamp]
+      properties:
+        type:
+          type: string
+        description:
+          type: string
+        timestamp:
+          type: string

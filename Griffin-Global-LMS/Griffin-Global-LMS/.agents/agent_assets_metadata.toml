@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "NdqFOz2Lkh804mK-8eQxE"
+uri = "file://GRIFFIN_LMS_AUDIT.md"
+type = "text"
+title = "Griffin LMS — Complete Engineering Audit"
+
+[[outputs]]
+id = "VYdgeaP_k1ms6Zzrr2d5H"
+uri = "file://Griffin-Global-LMS.zip"
+type = "unspecified"
+title = "Griffin Global LMS — Clean VS Code / GitHub Export"
